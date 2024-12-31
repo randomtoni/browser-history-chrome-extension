@@ -1,9 +1,31 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Set today date for start-date and end-date
-    const today = new Date().toISOString().split('T')[0]
+    let date = new Date()
+    const d = date.getDate()
+    const m = date.getMonth()+1
+    const y = date.getFullYear()
+    const today = `${y}-${m}-${d}`
     document.getElementById('start-date').value = today
     document.getElementById('end-date').value = today
 })
+
+let urlsDates = new Map()
+
+async function getUrlDate(url) {
+    const fetchData = new Promise((res) => {
+        chrome.history.getVisits(
+            {url},
+            (visitItems) => {
+                let times = []
+                visitItems.forEach(item => {
+                    times.push(item.visitTime)
+                })
+                res(times)
+            }
+        )
+    })
+    return fetchData
+}
   
 document.getElementById('search').addEventListener('click', () => {
     const startDate = document.getElementById('start-date').value
@@ -23,7 +45,7 @@ document.getElementById('search').addEventListener('click', () => {
     if (startDateTime > endDateTime) {
       alert('Start date and time must be before end date and time.')
       return
-    }
+    }      
   
     // Use the chrome.history API
     chrome.history.search(
@@ -31,18 +53,41 @@ document.getElementById('search').addEventListener('click', () => {
             text: '', // Empty string to match all items
             startTime: startDateTime,
             endTime: endDateTime,
-            maxResults: 1000 // Adjust based on your needs
+            maxResults: 9999 // Adjust based on your needs
         },
-        (results) => {
+        async (results) => {
             const historyList = document.getElementById('history-list')
             historyList.innerHTML = '' // Clear the list
-            results.forEach((item) => {
+            let currentDate = endDateTime
+            await results.forEach(async (item) => {
                 const listItem = document.createElement('ul')
                 const pItem = document.createElement('p')
                 const urlItem = document.createElement('a')
-                const timeParts = new Date(item.lastVisitTime).toISOString().split('T')[1].split(":")
-                const time = `${timeParts[0]}:${timeParts[1]}hs`
-                urlItem.textContent = `${time} - ${item.title}`
+                
+                let dates = null
+                if (urlsDates.has(item.url)) dates = urlsDates.get(item.url)
+                else {
+                    dates = await getUrlDate(item.url)
+                    urlsDates.set(item.url, dates)
+                }
+                let date = null
+                for (let d of dates.reverse()) {
+                    if (!date && d<currentDate && d>=startDateTime) {
+                        date = d
+                    }
+                }
+                currentDate = date
+
+                const d = new Date(date)
+                const timeParts = d.toISOString().split('T')[1].split(":")
+                const offset = d.getTimezoneOffset()
+                const h = timeParts[0]
+                const m = timeParts[1]
+                const hour = Number(h)-Math.min(offset/60)
+                const minutes = Number(m)-offset%60
+                const time = `${hour<0?24+hour:hour}:${minutes}hs`
+
+                urlItem.textContent = `${time} - ${item.title||item.url}`
                 urlItem.href = item.url
                 pItem.appendChild(urlItem)
                 listItem.appendChild(pItem)
@@ -54,7 +99,6 @@ document.getElementById('search').addEventListener('click', () => {
             filterInput.style.display = 'block'
             
             const mainContainer = document.getElementsByClassName('container')[0]
-            console.log("mainContainer", mainContainer)
             mainContainer.style["min-width"] = "600px"
             
             // Add filter functionality

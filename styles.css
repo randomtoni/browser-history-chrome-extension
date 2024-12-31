@@ -74,6 +74,10 @@ body {
     border-radius: 4px;
     font-size: 14px;
     word-wrap: break-word;
+    max-height: 24px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-wrap: break-word;
   }
 
   a {
@@ -82,7 +86,6 @@ body {
     text-overflow: ellipsis;
     word-wrap: break-word;
     overflow: hidden;
-    max-height: 1em;
   }
   a:visited {
     color: #555;
