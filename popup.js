@@ -107,7 +107,7 @@ document.getElementById('search').addEventListener('click', () => {
                 Array.from(historyList.children).forEach((listItem) => {
                     const aElement = listItem.firstChild.firstChild
                     const text = aElement.textContent || aElement.innerText
-                    listItem.style.display = text.includes(filterText) ? '' : 'none'
+                    listItem.style.display = text.toLowerCase().includes(filterText) ? '' : 'none'
                 })
             }) 
         }
